@@ -18,7 +18,7 @@ func main() {
     }
 
     for {
-        _, err := conn.Write([]byte("Hello TCPw V0.2"))
+        _, err := conn.Write([]byte("Hello TCPw V0.3"))
         if err != nil {
             fmt.Println("writ conn err ", err)
             return

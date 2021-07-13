@@ -1,7 +1,6 @@
 package wnet
 
 import (
-    "errors"
     "fmt"
     "net"
     "tcpw/wiface"
@@ -12,17 +11,7 @@ type Server struct {
     IPVersion string
     IP        string
     Port      int
-}
-
-func CallBackToClient(conn *net.TCPConn, data []byte, cnt int) error {
-    fmt.Println("[Conn Handle] CallbackToClient...")
-
-    if _, err := conn.Write(data[:cnt]); err != nil {
-        fmt.Println("write back buf err ", err)
-        return errors.New("CallBackToClient error")
-    }
-
-    return nil
+    Router    wiface.IRouter
 }
 
 func (s *Server) Start() {
@@ -52,7 +41,7 @@ func (s *Server) Start() {
                 continue
             }
 
-            dealConn := NewConnection(conn, cid, CallBackToClient)
+            dealConn := NewConnection(conn, cid, s.Router)
             cid++
 
             go dealConn.Start()
@@ -70,12 +59,18 @@ func (s *Server) Serve() {
     select {}
 }
 
+func (s *Server) AddRouter(router wiface.IRouter) {
+    s.Router = router
+    fmt.Println("Add Router Succ!!")
+}
+
 func NewServer(name string) wiface.IServer {
     s := &Server{
         Name:      name,
         IPVersion: "tcp4",
         IP:        "0.0.0.0",
         Port:      8999,
+        Router:    nil,
     }
 
     return s

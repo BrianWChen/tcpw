@@ -7,20 +7,21 @@ import (
 )
 
 type Connection struct {
-    Conn *net.TCPConn
-    ConnID uint32
-    isClosed bool
+    Conn      *net.TCPConn
+    ConnID    uint32
+    isClosed  bool
     handleAPI wiface.HandleFunc
-    ExitChan chan bool
+    ExitChan  chan bool
+    Router    wiface.IRouter
 }
 
-func NewConnection(conn *net.TCPConn, connID uint32, callbackApi wiface.HandleFunc) *Connection {
+func NewConnection(conn *net.TCPConn, connID uint32, router wiface.IRouter) *Connection {
     c := &Connection{
-        Conn:      conn,
-        ConnID:    connID,
-        handleAPI: callbackApi,
-        isClosed:  false,
-        ExitChan:  make(chan bool, 1),
+        Conn:     conn,
+        ConnID:   connID,
+        Router:   router,
+        isClosed: false,
+        ExitChan: make(chan bool, 1),
     }
 
     return c
@@ -33,16 +34,23 @@ func (c *Connection) StartReader() {
 
     for {
         buf := make([]byte, 512)
-        cnt, err := c.Conn.Read(buf)
+        _, err := c.Conn.Read(buf)
         if err != nil {
             fmt.Println("recv buf err ", err)
             continue
         }
 
-        if err := c.handleAPI(c.Conn, buf, cnt); err != nil {
-            fmt.Println("ConnID ", c.ConnID, " handle is error ", err)
-            break
+        req := Request{
+            conn: c,
+            data: buf,
         }
+
+        go func(request wiface.IRequest) {
+            c.Router.PreHandle(request)
+            c.Router.Handle(request)
+            c.Router.PostHandle(request)
+        }(&req)
+
     }
 }
 
@@ -77,6 +85,6 @@ func (c *Connection) RemoteAddr() net.Addr {
     return c.Conn.RemoteAddr()
 }
 
-func (c *Connection) Send(data []byte) error{
-return nil
+func (c *Connection) Send(data []byte) error {
+    return nil
 }
