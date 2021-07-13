@@ -3,6 +3,7 @@ package wnet
 import (
     "fmt"
     "net"
+    "tcpw/utils"
     "tcpw/wiface"
 )
 
@@ -15,7 +16,12 @@ type Server struct {
 }
 
 func (s *Server) Start() {
-    fmt.Printf("[Start] Server Listener at IP %s, Port %d, is starting\n", s.IP, s.Port)
+    fmt.Printf("[TCPw] Server name: %s,listenner at IP: %s, Port %d is starting\n",
+        utils.GlobalObject.Name, utils.GlobalObject.Host, utils.GlobalObject.TCPPort)
+    fmt.Printf("[TCPw] Version: %s,MaxConn: %d, MaxPackageSize %d\n",
+        utils.GlobalObject.Version,
+        utils.GlobalObject.MaxConn,
+        utils.GlobalObject.MaxPackageSize)
 
     go func() {
         addr, err := net.ResolveTCPAddr(s.IPVersion, fmt.Sprintf("%s:%d", s.IP, s.Port))
@@ -66,10 +72,10 @@ func (s *Server) AddRouter(router wiface.IRouter) {
 
 func NewServer(name string) wiface.IServer {
     s := &Server{
-        Name:      name,
+        Name:      utils.GlobalObject.Name,
         IPVersion: "tcp4",
-        IP:        "0.0.0.0",
-        Port:      8999,
+        IP:        utils.GlobalObject.Host,
+        Port:      utils.GlobalObject.TCPPort,
         Router:    nil,
     }
 
