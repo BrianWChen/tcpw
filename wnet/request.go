@@ -4,7 +4,7 @@ import "tcpw/wiface"
 
 type Request struct {
     conn wiface.IConnection
-    data []byte
+    msg wiface.IMessage
 }
 
 func (r *Request) GetConnection() wiface.IConnection {
@@ -12,5 +12,9 @@ func (r *Request) GetConnection() wiface.IConnection {
 }
 
 func (r *Request) GetData() []byte {
-    return r.data
+    return r.msg.GetData()
+}
+
+func (r *Request) GetMsgID() uint32 {
+    return r.msg.GetMsgID()
 }
