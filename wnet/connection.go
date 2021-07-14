@@ -9,19 +9,19 @@ import (
 )
 
 type Connection struct {
-    Conn      *net.TCPConn
-    ConnID    uint32
-    isClosed  bool
-    handleAPI wiface.HandleFunc
-    ExitChan  chan bool
-    Router    wiface.IRouter
+    Conn       *net.TCPConn
+    ConnID     uint32
+    isClosed   bool
+    handleAPI  wiface.HandleFunc
+    ExitChan   chan bool
+    MsgHandler wiface.IMsgHandler
 }
 
-func NewConnection(conn *net.TCPConn, connID uint32, router wiface.IRouter) *Connection {
+func NewConnection(conn *net.TCPConn, connID uint32, msgHandler wiface.IMsgHandler) *Connection {
     c := &Connection{
         Conn:     conn,
         ConnID:   connID,
-        Router:   router,
+        MsgHandler:   msgHandler,
         isClosed: false,
         ExitChan: make(chan bool, 1),
     }
@@ -77,12 +77,7 @@ func (c *Connection) StartReader() {
             msg:  msg,
         }
 
-        go func(request wiface.IRequest) {
-           c.Router.PreHandle(request)
-           c.Router.Handle(request)
-           c.Router.PostHandle(request)
-        }(&req)
-
+        go c.MsgHandler.DoMsgHandler(&req)
     }
 }
 

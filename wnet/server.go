@@ -8,11 +8,11 @@ import (
 )
 
 type Server struct {
-    Name      string
-    IPVersion string
-    IP        string
-    Port      int
-    Router    wiface.IRouter
+    Name       string
+    IPVersion  string
+    IP         string
+    Port       int
+    msgHandler wiface.IMsgHandler
 }
 
 func (s *Server) Start() {
@@ -47,7 +47,7 @@ func (s *Server) Start() {
                 continue
             }
 
-            dealConn := NewConnection(conn, cid, s.Router)
+            dealConn := NewConnection(conn, cid, s.msgHandler)
             cid++
 
             go dealConn.Start()
@@ -65,18 +65,18 @@ func (s *Server) Serve() {
     select {}
 }
 
-func (s *Server) AddRouter(router wiface.IRouter) {
-    s.Router = router
+func (s *Server) AddRouter(msgID uint32, router wiface.IRouter) {
+    s.msgHandler.AddRouter(msgID, router)
     fmt.Println("Add Router Succ!!")
 }
 
 func NewServer(name string) wiface.IServer {
     s := &Server{
-        Name:      utils.GlobalObject.Name,
-        IPVersion: "tcp4",
-        IP:        utils.GlobalObject.Host,
-        Port:      utils.GlobalObject.TCPPort,
-        Router:    nil,
+        Name:       utils.GlobalObject.Name,
+        IPVersion:  "tcp4",
+        IP:         utils.GlobalObject.Host,
+        Port:       utils.GlobalObject.TCPPort,
+        msgHandler: NewMsgHandle(),
     }
 
     return s
