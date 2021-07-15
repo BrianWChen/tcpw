@@ -42,7 +42,7 @@ func (g *GlobalObj) Reload() {
 func init() {
     GlobalObject = &GlobalObj{
         Name:           "TCPwServerApp",
-        Version:        "V0.8",
+        Version:        "V0.9",
         TCPPort:        8999,
         Host:           "0.0.0.0",
         MaxConn:        12000,

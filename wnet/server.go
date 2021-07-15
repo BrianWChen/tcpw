@@ -12,7 +12,10 @@ type Server struct {
     IPVersion  string
     IP         string
     Port       int
-    msgHandler wiface.IMsgHandler
+    MsgHandler wiface.IMsgHandler
+    ConnMgr    wiface.IConnManager
+    OnConnStart func(conn wiface.IConnection)
+    OnConnStop func(conn wiface.IConnection)
 }
 
 func (s *Server) Start() {
@@ -25,7 +28,7 @@ func (s *Server) Start() {
 
     go func() {
         //0 启动worker工作池机制
-        s.msgHandler.StartWorkerPool()
+        s.MsgHandler.StartWorkerPool()
 
         addr, err := net.ResolveTCPAddr(s.IPVersion, fmt.Sprintf("%s:%d", s.IP, s.Port))
         if err != nil {
@@ -50,7 +53,13 @@ func (s *Server) Start() {
                 continue
             }
 
-            dealConn := NewConnection(conn, cid, s.msgHandler)
+            if s.ConnMgr.Len() >= utils.GlobalObject.MaxConn {
+                fmt.Println("Too Many Connections MaxConn = ", utils.GlobalObject.MaxConn)
+                conn.Close()
+                continue
+            }
+
+            dealConn := NewConnection(s, conn, cid, s.MsgHandler)
             cid++
 
             go dealConn.Start()
@@ -59,7 +68,8 @@ func (s *Server) Start() {
 }
 
 func (s *Server) Stop() {
-
+    fmt.Println("[STOP] TCPw server name ", s.Name)
+    s.ConnMgr.ClearConn()
 }
 
 func (s *Server) Serve() {
@@ -69,8 +79,38 @@ func (s *Server) Serve() {
 }
 
 func (s *Server) AddRouter(msgID uint32, router wiface.IRouter) {
-    s.msgHandler.AddRouter(msgID, router)
+    s.MsgHandler.AddRouter(msgID, router)
     fmt.Println("Add Router Succ!!")
+}
+
+func (s *Server) GetConnMgr() wiface.IConnManager {
+    return s.ConnMgr
+}
+
+//SetOnConnStart 设置该Server的连接创建时Hook函数
+func (s *Server) SetOnConnStart(hookFunc func(wiface.IConnection)) {
+    s.OnConnStart = hookFunc
+}
+
+//SetOnConnStop 设置该Server的连接断开时的Hook函数
+func (s *Server) SetOnConnStop(hookFunc func(wiface.IConnection)) {
+    s.OnConnStop = hookFunc
+}
+
+//CallOnConnStart 调用连接OnConnStart Hook函数
+func (s *Server) CallOnConnStart(conn wiface.IConnection) {
+    if s.OnConnStart != nil {
+        fmt.Println("---> CallOnConnStart....")
+        s.OnConnStart(conn)
+    }
+}
+
+//CallOnConnStop 调用连接OnConnStop Hook函数
+func (s *Server) CallOnConnStop(conn wiface.IConnection) {
+    if s.OnConnStop != nil {
+        fmt.Println("---> CallOnConnStop....")
+        s.OnConnStop(conn)
+    }
 }
 
 func NewServer(name string) wiface.IServer {
@@ -79,7 +119,8 @@ func NewServer(name string) wiface.IServer {
         IPVersion:  "tcp4",
         IP:         utils.GlobalObject.Host,
         Port:       utils.GlobalObject.TCPPort,
-        msgHandler: NewMsgHandle(),
+        MsgHandler: NewMsgHandle(),
+        ConnMgr:    NewConnManager(),
     }
 
     return s

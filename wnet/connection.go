@@ -10,6 +10,7 @@ import (
 )
 
 type Connection struct {
+    TcpServer  wiface.IServer
     Conn       *net.TCPConn
     ConnID     uint32
     isClosed   bool
@@ -19,8 +20,9 @@ type Connection struct {
     MsgHandler wiface.IMsgHandler
 }
 
-func NewConnection(conn *net.TCPConn, connID uint32, msgHandler wiface.IMsgHandler) *Connection {
+func NewConnection(server wiface.IServer, conn *net.TCPConn, connID uint32, msgHandler wiface.IMsgHandler) *Connection {
     c := &Connection{
+        TcpServer:  server,
         Conn:       conn,
         ConnID:     connID,
         MsgHandler: msgHandler,
@@ -28,6 +30,8 @@ func NewConnection(conn *net.TCPConn, connID uint32, msgHandler wiface.IMsgHandl
         msgChan:    make(chan []byte),
         ExitChan:   make(chan bool, 1),
     }
+
+    c.TcpServer.GetConnMgr().Add(c)
 
     return c
 }
@@ -113,6 +117,8 @@ func (c *Connection) Start() {
     fmt.Println("Conn Start()... ConnId = ", c.ConnID)
     go c.StartReader()
     go c.StartWriter()
+
+    c.TcpServer.CallOnConnStart(c)
 }
 
 func (c *Connection) Stop() {
@@ -124,9 +130,13 @@ func (c *Connection) Stop() {
 
     c.isClosed = true
 
+    c.TcpServer.CallOnConnStop(c)
+
     c.Conn.Close()
 
     c.ExitChan <- true
+
+    c.TcpServer.GetConnMgr().Remove(c)
 
     close(c.ExitChan)
     close(c.msgChan)
