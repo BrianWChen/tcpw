@@ -14,16 +14,18 @@ type Connection struct {
     isClosed   bool
     handleAPI  wiface.HandleFunc
     ExitChan   chan bool
+    msgChan    chan []byte
     MsgHandler wiface.IMsgHandler
 }
 
 func NewConnection(conn *net.TCPConn, connID uint32, msgHandler wiface.IMsgHandler) *Connection {
     c := &Connection{
-        Conn:     conn,
-        ConnID:   connID,
-        MsgHandler:   msgHandler,
-        isClosed: false,
-        ExitChan: make(chan bool, 1),
+        Conn:       conn,
+        ConnID:     connID,
+        MsgHandler: msgHandler,
+        isClosed:   false,
+        msgChan:    make(chan []byte),
+        ExitChan:   make(chan bool, 1),
     }
 
     return c
@@ -31,7 +33,7 @@ func NewConnection(conn *net.TCPConn, connID uint32, msgHandler wiface.IMsgHandl
 
 func (c *Connection) StartReader() {
     fmt.Println("Reader Goroutine is running...")
-    defer fmt.Println("connID = ", c.ConnID, "Reader is exit, remote addr is ", c.RemoteAddr().String())
+    defer fmt.Println("[Reader is exit!] connID = ", c.ConnID, " remote addr is ", c.RemoteAddr().String())
     defer c.Stop()
 
     for {
@@ -81,9 +83,29 @@ func (c *Connection) StartReader() {
     }
 }
 
+func (c *Connection) StartWriter() {
+    fmt.Println("[Writer Goroutine is running]")
+    defer fmt.Println("[conn Writer exit!]", c.RemoteAddr().String())
+
+    for {
+        select {
+        case data := <-c.msgChan:
+            //有数据要写给客户端
+            if _, err := c.Conn.Write(data); err != nil {
+                fmt.Println("Send Data error:, ", err, " Conn Writer exit")
+                return
+            }
+            //fmt.Printf("Send data succ! data = %+v\n", data)
+        case <-c.ExitChan:
+            return
+        }
+    }
+}
+
 func (c *Connection) Start() {
     fmt.Println("Conn Start()... ConnId = ", c.ConnID)
     go c.StartReader()
+    go c.StartWriter()
 }
 
 func (c *Connection) Stop() {
@@ -97,7 +119,10 @@ func (c *Connection) Stop() {
 
     c.Conn.Close()
 
+    c.ExitChan <- true
+
     close(c.ExitChan)
+    close(c.msgChan)
 }
 
 func (c *Connection) GetTCPConnection() *net.TCPConn {
@@ -126,10 +151,7 @@ func (c *Connection) SendMsg(msgID uint32, data []byte) error {
     }
 
     //写回客户端
-    if _, err := c.Conn.Write(msg); err != nil {
-        fmt.Println("Write msg id ", msgID, "error :", err)
-        return errors.New("conn Write error")
-    }
+    c.msgChan <- msg
 
     return nil
 }
