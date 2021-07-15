@@ -21,6 +21,8 @@ type GlobalObj struct {
     Version        string
     MaxConn        int
     MaxPackageSize uint32
+    WorkerPoolSize uint32 //业务工作Worker池的数量
+    MaxWorkerTaskLen uint32 //业务工作Worker对应负责的任务队列最大任务存储数量
 }
 
 var GlobalObject *GlobalObj
@@ -40,11 +42,13 @@ func (g *GlobalObj) Reload() {
 func init() {
     GlobalObject = &GlobalObj{
         Name:           "TCPwServerApp",
-        Version:        "V0.7",
+        Version:        "V0.8",
         TCPPort:        8999,
         Host:           "0.0.0.0",
         MaxConn:        12000,
         MaxPackageSize: 4096,
+        WorkerPoolSize: 10,
+        MaxWorkerTaskLen: 1024,
     }
 
     //NOTE: 从配置文件中加载一些用户配置的参数

@@ -38,7 +38,7 @@ func (this *HelloZinxRouter) Handle(request wiface.IRequest) {
 }
 
 func main() {
-    s := wnet.NewServer("[TCPW V0.7]")
+    s := wnet.NewServer("[TCPW V0.8]")
 
     s.AddRouter(0, &PingRouter{})
     s.AddRouter(1, &HelloZinxRouter{})

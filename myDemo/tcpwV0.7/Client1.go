@@ -22,7 +22,7 @@ func main() {
     for {
         //发封包message消息
         dp := wnet.NewDataPack()
-        msg, _ := dp.Pack(wnet.NewMsgPackage(1, []byte("TCPw V0.6 Client1 Test Message")))
+        msg, _ := dp.Pack(wnet.NewMsgPackage(1, []byte("TCPw V0.7 Client1 Test Message")))
         _, err := conn.Write(msg)
         if err != nil {
             fmt.Println("write error err ", err)

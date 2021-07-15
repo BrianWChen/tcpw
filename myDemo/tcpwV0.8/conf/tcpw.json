@@ -1,0 +1,7 @@
+{
+  "Name": "tcpw v0.8 demoServerApp",
+  "Host": "127.0.0.1",
+  "TcpPort": 5000,
+  "MaxConn": 3,
+  "WorkerPoolSize": 10
+}
