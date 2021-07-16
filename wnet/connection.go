@@ -5,6 +5,7 @@ import (
     "fmt"
     "io"
     "net"
+    "sync"
     "tcpw/utils"
     "tcpw/wiface"
 )
@@ -18,6 +19,10 @@ type Connection struct {
     ExitChan   chan bool
     msgChan    chan []byte
     MsgHandler wiface.IMsgHandler
+    //链接属性
+    property map[string]interface{}
+    ////保护当前property的锁
+    propertyLock sync.Mutex
 }
 
 func NewConnection(server wiface.IServer, conn *net.TCPConn, connID uint32, msgHandler wiface.IMsgHandler) *Connection {
@@ -29,6 +34,7 @@ func NewConnection(server wiface.IServer, conn *net.TCPConn, connID uint32, msgH
         isClosed:   false,
         msgChan:    make(chan []byte),
         ExitChan:   make(chan bool, 1),
+        property:   make(map[string]interface{}),
     }
 
     c.TcpServer.GetConnMgr().Add(c)
@@ -171,4 +177,35 @@ func (c *Connection) SendMsg(msgID uint32, data []byte) error {
     c.msgChan <- msg
 
     return nil
+}
+
+//SetProperty 设置链接属性
+func (c *Connection) SetProperty(key string, value interface{}) {
+    c.propertyLock.Lock()
+    defer c.propertyLock.Unlock()
+    if c.property == nil {
+        c.property = make(map[string]interface{})
+    }
+
+    c.property[key] = value
+}
+
+//GetProperty 获取链接属性
+func (c *Connection) GetProperty(key string) (interface{}, error) {
+    c.propertyLock.Lock()
+    defer c.propertyLock.Unlock()
+
+    if value, ok := c.property[key]; ok {
+        return value, nil
+    }
+
+    return nil, errors.New("no property found")
+}
+
+//RemoveProperty 移除链接属性
+func (c *Connection) RemoveProperty(key string) {
+    c.propertyLock.Lock()
+    defer c.propertyLock.Unlock()
+
+    delete(c.property, key)
 }
